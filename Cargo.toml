@@ -1,0 +1,16 @@
+[package]
+name = "cofdtools"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[profile.release]
+lto = true
+
+[dependencies]
+dioxus = "0.4.0"
+dioxus-desktop = "0.4.0"
+
+cofd-miner = { git = "https://github.com/m00nwtchr/cofd-miner.git" }
+cofd-schema = { git = "https://github.com/m00nwtchr/cofd-miner.git" }
+dioxus-router = "0.4.1"
