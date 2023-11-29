@@ -1,45 +1,52 @@
-use std::fmt::Display;
-
-use cofd_schema::book::Book;
-use cofd_schema::dot_range::DotRange;
-use cofd_schema::item::{Item, ItemProp, PropValue};
-use cofd_schema::prerequisites;
-use dioxus::html::{td, tr};
+use cofd_schema::{
+	book::{Book, MeritItem},
+	item::{merit::Merit, Item},
+};
 use dioxus::prelude::*;
 
-use crate::{app::AppState, components::NavComponent};
+use crate::{app::use_books, components::NavComponent};
 
 pub fn Merits(cx: Scope) -> Element {
-	let app_state_context = use_shared_state::<AppState>(cx).unwrap().read();
+	let books = use_books(cx).read();
+	let mut merits: Vec<&MeritItem> = books.iter().flat_map(|book| &book.merits).collect();
 
-	let mut merits: Vec<(&Book, &Item)> = app_state_context
-		.books
-		.iter()
-		.flat_map(|book| book.merits.iter().map(move |m| (book, m)))
-		.collect();
+	merits.sort_by_key(|merit| &merit.name);
+	let selected_merit = use_state(cx, || 0usize);
 
-	merits.sort_unstable_by_key(|(_, merit)| &merit.name);
-
-	let merits_rendered = merits.iter().map(|(book, item)| {
-		match (
-			item.properties.get(&ItemProp::DotRating),
-			item.properties.get(&ItemProp::Prerequisites),
-		) {
-			(Some(PropValue::DotRange(rating)), Some(PropValue::Prerequisites(prerequisites))) => {
-				let v = prerequisites
-					.iter()
-					.map(|p| p.to_string())
-					.collect::<Vec<_>>()
-					.join(", ");
-				rsx!(tr {
-					td { "{ item.name }" }
-					td { "{ rating }" }
-					td { "{ v }" }
-					td { "{ book.info.short_name } pg.{ item.page }" }
-				})
+	let merit_rendered = if let Some(merit) = merits.get(*selected_merit.get()) {
+		rsx!(span {
+			h1 { "{ merit.name }" },
+			for paragraph in &merit.description {
+				p { class: "indent-4", "{ paragraph }" }
 			}
-			_ => rsx!(tr {}),
-		}
+
+			p { class: "indent-4",
+				span { class: "font-bold", "Effects:" }, *merit.effects.first().unwrap_or_else(|| &String::new())
+			}
+
+
+			for paragraph in &merit.effects {
+				p { class: "indent-4", "{ paragraph }" }
+			}
+		})
+	} else {
+		rsx!(span {})
+	};
+
+	let merits_rendered = merits.iter().enumerate().map(|(i, item)| {
+		let dot_rating = item.inner.dot_rating.to_string();
+		let prerequisites = item.inner.prerequisites.to_string();
+
+		rsx!(tr {
+			onclick: {
+				move |_| selected_merit.set(i)
+			},
+			style: "cursor: pointer;",
+			td { "{ item.name }" }
+			td { "{ dot_rating }" }
+			td { "{ prerequisites }" }
+			td { "{ item.reference }" }
+		})
 	});
 
 	cx.render(rsx! {
@@ -47,24 +54,35 @@ pub fn Merits(cx: Scope) -> Element {
 			NavComponent {}
 		}
 		main {
-			"Merits"
+			class: "container mx-auto",
 
-			table {
-				tr {
-					th {
-						"Name"
-					}
-					th {
-						"Rating"
-					}
-					th {
-						"Prerequisite"
-					}
-					th {
-						"Source"
-					}
-				},
-				merits_rendered
+			div {
+				class: "flex flex-row flex-wrap py-4",
+				div {
+					class: "w-full sm:w-2/3 md:w-3/4 pt-1 px-2",
+					table {
+						class: "w-full",
+						tr {
+							th {
+								"Name"
+							}
+							th {
+								"Rating"
+							}
+							th {
+								"Prerequisites"
+							}
+							th {
+								"Source"
+							}
+						}
+						merits_rendered
+					},
+				}
+				div {
+					class: "w-full sm:w-1/3 md:w-1/4 px-2",
+					merit_rendered
+				}
 			}
 		}
 	})
