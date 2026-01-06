@@ -1,0 +1,24 @@
+inputs:
+  cofd-miner:
+    url: github:m00nwtchr/cofd-miner
+    flake: false
+  cofd:
+    url: github:m00nwtchr/cofd
+    flake: false
+  crate2nix:
+    url: github:nix-community/crate2nix
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+  nixpkgs:
+    url: github:cachix/devenv-nixpkgs/rolling
+  rust-overlay:
+    url: github:oxalica/rust-overlay
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+  treefmt-nix:
+    url: github:numtide/treefmt-nix
+imports:
+- cofd-miner
+- cofd

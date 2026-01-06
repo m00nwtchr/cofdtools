@@ -1,31 +1,52 @@
 use std::process::Command;
 
 fn pnpm_installed() -> bool {
-	return Command::new("pnpm").arg("-v").status().unwrap().success();
+	Command::new("pnpm")
+		.arg("-v")
+		.status()
+		.is_ok_and(|r| r.success())
 }
+
+fn tailwindcss_installed() -> bool {
+	Command::new("tailwindcss")
+		.arg("-h")
+		.status()
+		.is_ok_and(|r| r.success())
+}
+
+const TAILWIND_ARGS: [&'static str; 7] = [
+	"-i",
+	"input.css",
+	"-c",
+	"tailwind.config.js",
+	"-o",
+	"assets/tailwind.css",
+	"--minify",
+];
 
 fn main() {
 	println!("cargo:rerun-if-changed=./src");
 	println!("cargo:rerun-if-changed=input.css");
-	println!("cargo:rerun-if-changed=tailwind.config.js");
 
+	let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR missing");
+
+	// Compile TailwindCSS .css file
 	if pnpm_installed() {
-		// Compile TailwindCSS .css file
 		Command::new("pnpm")
-			.args([
-				"dlx",
-				"tailwindcss",
-				"-i",
-				"input.css",
-				"-c",
-				"tailwind.config.js",
-				"-o",
-				"public/tailwind.css",
-				"--minify",
-			])
-			.current_dir(std::env!("CARGO_MANIFEST_DIR"))
+			.args(["dlx", "@tailwindcss/cli"])
+			.args(TAILWIND_ARGS)
+			.current_dir(&manifest_dir)
 			.env("NODE_ENV", "production")
 			.spawn()
 			.unwrap();
+	} else if tailwindcss_installed() {
+		Command::new("tailwindcss")
+			.args(TAILWIND_ARGS)
+			.current_dir(&manifest_dir)
+			.env("NODE_ENV", "production")
+			.spawn()
+			.unwrap();
+	} else {
+		panic!("Neither `pnpm` nor `tailwindcss` is available; cannot build Tailwind CSS.");
 	}
 }

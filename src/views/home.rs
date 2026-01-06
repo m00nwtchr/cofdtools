@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::components::NavComponent;
 
-pub fn Home(cx: Scope) -> Element {
-	render! {
+#[component]
+pub fn Home() -> Element {
+	rsx! {
 		header {
 			NavComponent {}
 		}

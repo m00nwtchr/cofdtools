@@ -6,7 +6,6 @@ use std::{
 use anyhow::anyhow;
 use cofd_schema::book::Book;
 use dioxus::prelude::*;
-use dioxus_router::prelude::Router;
 use directories::ProjectDirs;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -16,7 +15,7 @@ use crate::router::Route;
 pub static DIRS: Lazy<ProjectDirs> =
 	Lazy::new(|| ProjectDirs::from("", "", "CofD.tools").expect("Project dirs"));
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Books(Vec<Book>);
 
@@ -49,15 +48,15 @@ impl DerefMut for Books {
 // 	pub books: Vec<Book>,
 // }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct AppSettings {}
 
-pub fn use_books(cx: &ScopeState) -> &UseSharedState<Books> {
-	use_shared_state::<Books>(cx).expect("State not provided")
+pub fn use_books() -> Signal<Books> {
+	consume_context()
 }
 
-pub fn use_app_settings(cx: &ScopeState) -> &UseSharedState<AppSettings> {
-	use_shared_state::<AppSettings>(cx).expect("Settings not provided")
+pub fn use_app_settings() -> Signal<AppSettings> {
+	consume_context()
 }
 
 fn read_books() -> anyhow::Result<Books> {
@@ -88,16 +87,20 @@ fn read_settings() -> anyhow::Result<AppSettings> {
 	}
 }
 
-pub fn App(cx: Scope) -> Element {
-	use_shared_state_provider(cx, || {
-		read_books().unwrap_or_else(|err| {
+#[component]
+pub fn App() -> Element {
+	use_context_provider(|| {
+		Signal::new(read_books().unwrap_or_else(|err| {
 			log::error!("{err}");
 			Default::default()
-		})
+		}))
 	});
-	use_shared_state_provider(cx, || read_settings().unwrap_or_default());
+	use_context_provider(|| Signal::new(read_settings().unwrap_or_default()));
 
-	cx.render(rsx! {
+	rsx! {
+		document::Stylesheet {
+			href: asset!("/assets/tailwind.css")
+		},
 		Router::<Route> {}
-	})
+	}
 }

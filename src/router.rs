@@ -1,25 +1,23 @@
 use dioxus::prelude::*;
-use dioxus_router::prelude::*;
 
 use crate::views::*;
 
 #[derive(Routable, Clone)]
 pub enum Route {
 	#[route("/")]
-	#[redirect("/:..route", |route: Vec<String>| Route::Home {})]
-	Home {},
+	Home,
 	#[route("/books")]
-	Books {},
+	Books,
 	#[route("/merits")]
-	Merits {},
+	Merits,
 
 	#[route("/:..route")]
 	NotFound { route: Vec<String> },
 }
 
-#[inline_props]
-fn NotFound(cx: Scope, route: Vec<String>) -> Element {
-	render! {
+#[component]
+fn NotFound(route: Vec<String>) -> Element {
+	rsx! {
 		h1 { "Page not found" }
 	}
 }

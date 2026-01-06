@@ -1,36 +1,43 @@
 use cofd_schema::{
 	book::{Book, MeritItem},
-	item::{merit::Merit, Item},
+	item::{Item, merit::Merit},
 };
 use dioxus::prelude::*;
 
 use crate::{app::use_books, components::NavComponent};
 
-pub fn Merits(cx: Scope) -> Element {
-	let books = use_books(cx).read();
+#[component]
+pub fn Merits() -> Element {
+	let books = use_books();
+	let books = books.read();
 	let mut merits: Vec<&MeritItem> = books.iter().flat_map(|book| &book.merits).collect();
 
 	merits.sort_by_key(|merit| &merit.name);
-	let selected_merit = use_state(cx, || 0usize);
+	let mut selected_merit = use_signal(|| 0usize);
 
-	let merit_rendered = if let Some(merit) = merits.get(*selected_merit.get()) {
-		rsx!(span {
-			h1 { "{ merit.name }" },
-			for paragraph in &merit.description {
-				p { class: "indent-4", "{ paragraph }" }
+	let merit_rendered = if let Some(merit) = merits.get(selected_merit()) {
+		let effect = merit.effects.first().cloned().unwrap_or_default();
+		rsx! {
+			span {
+				h1 { "{merit.name}" }
+				for paragraph in &merit.description {
+					p { class: "indent-4", "{paragraph}" }
+				}
+
+				for (idx, paragraph) in merit.effects.iter().enumerate() {
+					p { class: "indent-4",
+						if idx == 0 {
+							span { class:"font-bold", "Effects: "}
+						}
+						"{paragraph}"
+					}
+				}
 			}
-
-			p { class: "indent-4",
-				span { class: "font-bold", "Effects:" }, *merit.effects.first().unwrap_or_else(|| &String::new())
-			}
-
-
-			for paragraph in &merit.effects {
-				p { class: "indent-4", "{ paragraph }" }
-			}
-		})
+		}
 	} else {
-		rsx!(span {})
+		rsx! {
+			span {}
+		}
 	};
 
 	let merits_rendered = merits.iter().enumerate().map(|(i, item)| {
@@ -42,14 +49,14 @@ pub fn Merits(cx: Scope) -> Element {
 				move |_| selected_merit.set(i)
 			},
 			style: "cursor: pointer;",
-			td { "{ item.name }" }
-			td { "{ dot_rating }" }
-			td { "{ prerequisites }" }
-			td { "{ item.reference }" }
+			td { "{item.name}" }
+			td { "{dot_rating}" }
+			td { "{prerequisites}" }
+			td { "{item.reference}" }
 		})
 	});
 
-	cx.render(rsx! {
+	rsx! {
 		header {
 			NavComponent {}
 		}
@@ -76,14 +83,14 @@ pub fn Merits(cx: Scope) -> Element {
 								"Source"
 							}
 						}
-						merits_rendered
+						{merits_rendered}
 					},
 				}
 				div {
 					class: "w-full sm:w-1/3 md:w-1/4 px-2",
-					merit_rendered
+					{merit_rendered}
 				}
 			}
 		}
-	})
+	}
 }
